@@ -6,7 +6,309 @@
 <title>ZONE COMMANDER</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/style.css">
+<style>
+/* ──────────────────────────────────────────────
+   ZONE COMMANDER — retro pixel styling
+   ────────────────────────────────────────────── */
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg: #1a1626;
+  --panel: #241f35;
+  --panel2: #2e2745;
+  --border: #4a4066;
+  --gold: #ffd24a;
+  --blue: #4aa3ff;
+  --red: #ff5a5a;
+  --text: #e8e0d0;
+}
+
+html, body { height: 100%; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: "Press Start 2P", "Courier New", monospace;
+  font-size: 11px;
+  line-height: 1.6;
+  image-rendering: pixelated;
+  overflow: hidden;
+}
+
+.hidden { display: none !important; }
+.dim { color: #8f86a8; }
+
+canvas { image-rendering: pixelated; }
+
+/* ── screens ── */
+.screen {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+  padding: 16px;
+}
+
+.game-title {
+  font-size: 34px;
+  color: var(--gold);
+  text-shadow: 4px 4px 0 #000, 8px 8px 0 #4a2a70;
+  letter-spacing: 4px;
+}
+.subtitle { color: #b7aed2; }
+
+.title-buttons { display: flex; gap: 16px; }
+
+button {
+  font-family: inherit;
+  font-size: 11px;
+  color: var(--text);
+  background: var(--panel2);
+  border: 3px solid var(--border);
+  box-shadow: 3px 3px 0 #000;
+  padding: 10px 14px;
+  cursor: pointer;
+}
+button:hover:not(:disabled) { background: #3a3158; border-color: var(--gold); }
+button:active:not(:disabled) { transform: translate(2px, 2px); box-shadow: 1px 1px 0 #000; }
+button:disabled { opacity: 0.35; cursor: default; }
+button.confirm { border-color: var(--gold); color: var(--gold); }
+.big-btn { font-size: 14px; padding: 16px 22px; }
+.big-btn.alt { border-color: var(--blue); }
+
+.help-box {
+  max-width: 720px;
+  background: var(--panel);
+  border: 3px solid var(--border);
+  padding: 14px 18px;
+  font-size: 9px;
+  line-height: 2;
+}
+
+/* ── deck builder ── */
+#screen-deck { justify-content: flex-start; align-items: stretch; overflow: hidden; }
+#deck-title { text-align: center; font-size: 16px; text-shadow: 3px 3px 0 #000; }
+#deck-layout { display: flex; gap: 12px; flex: 1; min-height: 0; }
+.panel {
+  background: var(--panel);
+  border: 3px solid var(--border);
+  padding: 10px;
+  overflow-y: auto;
+}
+.panel h3 { font-size: 10px; color: var(--gold); margin-bottom: 8px; }
+#roster-panel { flex: 1.2; }
+#squad-panel { flex: 1; display: flex; flex-direction: column; }
+
+#roster-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 8px;
+}
+.char-card {
+  background: var(--panel2);
+  border: 2px solid var(--border);
+  padding: 6px;
+  cursor: pointer;
+  text-align: center;
+}
+.char-card:hover { border-color: var(--gold); }
+.char-card.cmd { border-color: #a06cd5; }
+.cc-icon { font-size: 22px; }
+.cc-name { font-size: 9px; color: var(--gold); margin: 4px 0; }
+.cc-stats { font-size: 8px; color: #b7aed2; }
+.cc-moves { font-size: 7px; color: #8f86a8; margin-top: 4px; line-height: 1.8; }
+
+#squad-grid { display: flex; gap: 8px; flex: 1; min-height: 0; overflow-y: auto; }
+.squad-col { flex: 1; display: flex; flex-direction: column; gap: 6px; }
+.squad-label { font-size: 8px; color: var(--gold); text-align: center; }
+.deck-slot {
+  background: var(--panel2);
+  border: 2px dashed var(--border);
+  min-height: 58px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+.deck-slot .cc-icon { font-size: 18px; }
+.deck-slot .cc-name { font-size: 7px; }
+.deck-slot.cmd-slot { border-color: #a06cd5; }
+.slot-empty { font-size: 18px; color: #564a78; }
+.deck-buttons { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
+#deck-msg { color: var(--red); font-size: 9px; margin-top: 8px; min-height: 16px; }
+
+/* ── game screen ── */
+#screen-game { padding: 0; }
+#game-layout { display: flex; width: 100%; height: 100vh; }
+#board-canvas { flex: 1; cursor: crosshair; background: #0e0b16; }
+
+#sidebar {
+  width: 260px;
+  background: var(--panel);
+  border-left: 3px solid var(--border);
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  overflow-y: auto;
+}
+
+#turn-banner {
+  text-align: center;
+  font-size: 13px;
+  color: #0d0a14;
+  background: var(--blue);
+  border: 3px solid #000;
+  padding: 8px 4px;
+  text-shadow: none;
+}
+.stat-row { display: flex; justify-content: space-between; font-size: 9px; color: #b7aed2; }
+
+.player-box {
+  background: var(--panel2);
+  border: 2px solid var(--border);
+  padding: 5px 7px;
+}
+.player-box.current { border-color: var(--gold); }
+#pbox-0 .player-name { color: var(--blue); }
+#pbox-1 .player-name { color: var(--red); }
+.player-name { font-size: 10px; margin-bottom: 3px; }
+.pstats { display: flex; flex-wrap: wrap; gap: 3px 9px; font-size: 8px; }
+.pstats b { color: var(--text); }
+
+.panel-inset {
+  background: var(--panel2);
+  border: 2px solid var(--border);
+  padding: 6px;
+  font-size: 8px;
+  min-height: 90px;
+  max-height: 220px;
+  overflow-y: auto;
+}
+.sel-head { font-size: 9px; margin-bottom: 3px; }
+.sel-sub { color: #8f86a8; font-size: 7px; margin-bottom: 5px; }
+.sel-unit { display: flex; align-items: center; gap: 5px; margin: 3px 0; white-space: nowrap; }
+
+.bar {
+  display: inline-block;
+  width: 52px; height: 7px;
+  background: #14101f;
+  border: 1px solid #000;
+  margin: 0 4px;
+  vertical-align: middle;
+}
+.bar .fill { display: block; height: 100%; }
+.hp-num { font-size: 7px; color: #b7aed2; }
+
+#action-buttons { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; }
+#action-buttons button { font-size: 9px; padding: 7px 4px; }
+#mode-hint { font-size: 8px; color: #5fd45f; min-height: 14px; }
+.endturn { border-color: var(--gold); color: var(--gold); font-size: 10px; }
+
+#minimap { border: 3px solid var(--border); align-self: center; }
+
+#game-log {
+  flex: 1;
+  background: #14101f;
+  border: 2px solid var(--border);
+  padding: 5px;
+  font-size: 7px;
+  line-height: 1.9;
+  overflow-y: auto;
+  min-height: 70px;
+  color: #b7aed2;
+}
+
+/* ── modals ── */
+.modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(10, 8, 18, 0.82);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 50;
+}
+.modal-box {
+  background: var(--panel);
+  border: 4px solid var(--gold);
+  box-shadow: 6px 6px 0 #000;
+  padding: 16px;
+  max-width: 560px;
+  width: 92%;
+  max-height: 92vh;
+  overflow-y: auto;
+}
+.modal-box.wide { max-width: 1000px; }
+.modal-box h2 { font-size: 14px; color: var(--gold); text-align: center; margin-bottom: 8px; }
+.modal-buttons { display: flex; gap: 10px; justify-content: center; margin-top: 12px; }
+
+#enc-power { text-align: center; font-size: 10px; margin-bottom: 8px; }
+#enc-teams { display: flex; gap: 10px; }
+.enc-team {
+  flex: 1;
+  background: var(--panel2);
+  border: 2px solid var(--border);
+  padding: 6px;
+  min-width: 0;
+}
+.enc-team.active-team { border-color: var(--gold); }
+.enc-team h3 { font-size: 8px; margin-bottom: 6px; }
+.enc-units { display: flex; flex-direction: column; gap: 5px; max-height: 320px; overflow-y: auto; }
+.enc-row {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  flex-wrap: wrap;
+  background: #14101f;
+  border: 1px solid var(--border);
+  padding: 4px 5px;
+  font-size: 8px;
+}
+.enc-row.dead { opacity: 0.35; text-decoration: line-through; }
+.enc-icon { font-size: 14px; }
+.enc-name { flex: 1; min-width: 130px; }
+.enc-row select {
+  font-family: inherit;
+  font-size: 7px;
+  background: var(--panel2);
+  color: var(--text);
+  border: 2px solid var(--border);
+  padding: 3px;
+  max-width: 170px;
+}
+
+#enc-log {
+  background: #14101f;
+  border: 2px solid var(--border);
+  margin-top: 10px;
+  padding: 6px;
+  height: 120px;
+  overflow-y: auto;
+  font-size: 8px;
+  line-height: 1.9;
+  color: #b7aed2;
+}
+
+.unit-check-list { display: flex; flex-direction: column; gap: 5px; margin-top: 10px; }
+.check-row {
+  background: var(--panel2);
+  border: 2px solid var(--border);
+  padding: 6px;
+  font-size: 9px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+.check-row:hover { border-color: var(--gold); }
+
+#go-title { font-size: 20px; }
+#go-sub { text-align: center; font-size: 9px; color: #b7aed2; }
+</style>
 </head>
 <body>
 
@@ -150,12 +452,1293 @@
   </div>
 </div>
 
-<script src="js/data.js"></script>
-<script src="js/board.js"></script>
-<script src="js/game.js"></script>
-<script src="js/encounter.js"></script>
-<script src="js/render.js"></script>
-<script src="js/ui.js"></script>
-<script src="js/main.js"></script>
+<script>
+"use strict";
+/* ────────────────────────────────────────────────────────────
+   CHARACTER ROSTER
+   Every character is unlocked from the start.
+   Stats: HP · Moves · Speed (board tiles per move action) ·
+          Agility (battle turn order) · Defence (flat dmg reduction)
+   Moves: { name, cost (⚡power), dmg } or { name, cost, heal }
+   ──────────────────────────────────────────────────────────── */
+const CHARACTERS = [
+  /* ── Commanders — one leads each squadron ── */
+  { id:"captain",    name:"Captain",     icon:"⚔️", commander:true, hp:60, speed:4, agility:7, def:4,
+    moves:[{name:"Slash",cost:2,dmg:12},{name:"Rallying Strike",cost:4,dmg:18},{name:"Field Mend",cost:3,heal:10}]},
+  { id:"warlord",    name:"Warlord",     icon:"🪓", commander:true, hp:75, speed:3, agility:5, def:6,
+    moves:[{name:"Cleave",cost:2,dmg:11},{name:"Executioner",cost:5,dmg:22},{name:"War Cry",cost:3,heal:12}]},
+  { id:"huntmaster", name:"Huntmaster",  icon:"🏹", commander:true, hp:50, speed:6, agility:9, def:3,
+    moves:[{name:"Snap Shot",cost:1,dmg:8},{name:"Piercing Arrow",cost:3,dmg:14},{name:"Double Shot",cost:4,dmg:18}]},
+  { id:"archmage",   name:"Archmage",    icon:"🔮", commander:true, hp:45, speed:4, agility:8, def:2,
+    moves:[{name:"Spark",cost:1,dmg:9},{name:"Fireball",cost:4,dmg:19},{name:"Arcane Mend",cost:3,heal:14}]},
+
+  /* ── Regulars ── */
+  { id:"swordsman",  name:"Swordsman",   icon:"🗡️", hp:45, speed:4, agility:6, def:4,
+    moves:[{name:"Slash",cost:2,dmg:10},{name:"Guard Break",cost:4,dmg:16}]},
+  { id:"shieldbearer",name:"Shieldbearer",icon:"🛡️", hp:70, speed:3, agility:3, def:8,
+    moves:[{name:"Bash",cost:2,dmg:8},{name:"Shield Slam",cost:3,dmg:12}]},
+  { id:"archer",     name:"Archer",      icon:"🎯", hp:35, speed:5, agility:8, def:2,
+    moves:[{name:"Quick Shot",cost:1,dmg:7},{name:"Long Shot",cost:3,dmg:13}]},
+  { id:"knight",     name:"Knight",      icon:"🐴", hp:60, speed:6, agility:5, def:6,
+    moves:[{name:"Lance",cost:2,dmg:11},{name:"Cavalry Charge",cost:4,dmg:18}]},
+  { id:"mage",       name:"Mage",        icon:"🧙", hp:30, speed:4, agility:7, def:1,
+    moves:[{name:"Zap",cost:1,dmg:8},{name:"Firebolt",cost:3,dmg:15}]},
+  { id:"healer",     name:"Healer",      icon:"✨", hp:35, speed:4, agility:6, def:2,
+    moves:[{name:"Smite",cost:2,dmg:6},{name:"Mend",cost:3,heal:15}]},
+  { id:"scout",      name:"Scout",       icon:"🧭", hp:30, speed:8, agility:10, def:1,
+    moves:[{name:"Dagger",cost:1,dmg:6},{name:"Ambush",cost:3,dmg:13}]},
+  { id:"berserker",  name:"Berserker",   icon:"😤", hp:55, speed:5, agility:6, def:2,
+    moves:[{name:"Frenzy",cost:3,dmg:15},{name:"Reckless Blow",cost:5,dmg:23}]},
+  { id:"spearman",   name:"Spearman",    icon:"🔱", hp:50, speed:4, agility:5, def:5,
+    moves:[{name:"Thrust",cost:2,dmg:10},{name:"Skewer",cost:3,dmg:13}]},
+  { id:"crossbowman",name:"Crossbowman", icon:"🏹", hp:40, speed:4, agility:4, def:3,
+    moves:[{name:"Bolt",cost:2,dmg:12},{name:"Heavy Bolt",cost:4,dmg:17}]},
+  { id:"monk",       name:"Monk",        icon:"👊", hp:45, speed:5, agility:9, def:3,
+    moves:[{name:"Jab",cost:1,dmg:7},{name:"Flurry",cost:3,dmg:12},{name:"Chi Mend",cost:3,heal:10}]},
+  { id:"golem",      name:"Golem",       icon:"🗿", hp:90, speed:2, agility:1, def:9,
+    moves:[{name:"Smash",cost:3,dmg:14},{name:"Quake",cost:5,dmg:20}]},
+
+  /* ── Spawned by villages (also freely usable in decks) ── */
+  { id:"militia",    name:"Militia",     icon:"👨‍🌾", hp:20, speed:3, agility:3, def:1,
+    moves:[{name:"Pitchfork",cost:1,dmg:5}]},
+];
+
+const CHAR_BY_ID = Object.fromEntries(CHARACTERS.map(c => [c.id, c]));
+
+let UNIT_SEQ = 1;
+/* Create a live unit instance from a character template. */
+function makeUnit(charId){
+  const c = CHAR_BY_ID[charId];
+  return {
+    uid: UNIT_SEQ++, charId,
+    name: c.name, icon: c.icon, commander: !!c.commander,
+    hp: c.hp, maxHp: c.hp,
+    speed: c.speed, agility: c.agility, def: c.def,
+    moves: c.moves,
+  };
+}
+
+function commanderChars(){ return CHARACTERS.filter(c => c.commander); }
+function regularChars(){ return CHARACTERS.filter(c => !c.commander && c.id !== "militia"); }
+
+/* Build 4 random squadrons of 5 char ids (index 0 = commander). */
+function randomSquads(rnd){
+  rnd = rnd || Math.random;
+  const squads = [];
+  const cs = commanderChars(), rs = regularChars();
+  for(let s = 0; s < 4; s++){
+    const squad = [cs[Math.floor(rnd() * cs.length)].id];
+    for(let i = 0; i < 4; i++) squad.push(rs[Math.floor(rnd() * rs.length)].id);
+    squads.push(squad);
+  }
+  return squads;
+}
+</script>
+<script>
+"use strict";
+/* ────────────────────────────────────────────────────────────
+   BOARD GENERATION
+   100×100 tile board. One fixed seed → the same board is used
+   for every game. Zones (3×3) sit along the equator near the
+   centre; buildings (2×2) are scattered with a higher
+   concentration near the centre of the map.
+   ──────────────────────────────────────────────────────────── */
+const BOARD_SIZE = 100;
+const BOARD_SEED = 20260701;
+const BUILDING_COUNT = 48;
+
+function mulberry32(a){
+  return function(){
+    a |= 0; a = a + 0x6D2B79F5 | 0;
+    let t = Math.imul(a ^ a >>> 15, 1 | a);
+    t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+    return ((t ^ t >>> 14) >>> 0) / 4294967296;
+  };
+}
+
+function tileIdx(x, y){ return y * BOARD_SIZE + x; }
+
+function generateBoard(seed = BOARD_SEED){
+  const rnd = mulberry32(seed);
+
+  /* terrain variants: 0-2 grass shades, 3 = trees (visual only, all passable) */
+  const terrain = new Uint8Array(BOARD_SIZE * BOARD_SIZE);
+  for(let i = 0; i < terrain.length; i++){
+    const r = rnd();
+    terrain[i] = r < 0.60 ? 0 : r < 0.80 ? 1 : r < 0.92 ? 2 : 3;
+  }
+
+  /* ── Zones: 3×3, spread along the equator, close to centre rows ── */
+  const zones = [];
+  const zoneXs = [14, 26, 38, 50, 62, 74, 86];
+  for(const cx of zoneXs){
+    const cy = 50 + (Math.floor(rnd() * 7) - 3);      // jitter ±3 around equator
+    zones.push({ x: cx - 1, y: cy - 1 });             // top-left of 3×3
+  }
+
+  /* ── Buildings: 2×2, gaussian-clustered around the map centre ── */
+  const blocked = new Set();
+  const block = (x, y, w, h, margin) => {
+    for(let dy = -margin; dy < h + margin; dy++)
+      for(let dx = -margin; dx < w + margin; dx++)
+        blocked.add(tileIdx(x + dx, y + dy));
+  };
+  for(const z of zones) block(z.x, z.y, 3, 3, 2);
+
+  const buildings = [];
+  const buildingMap = new Map();                       // tileIdx → building
+  const types = ["village", "well", "mine"];
+  for(let tries = 0; tries < 6000 && buildings.length < BUILDING_COUNT; tries++){
+    /* sum of uniforms ≈ gaussian → denser near the centre */
+    const gx = (rnd() + rnd() + rnd() + rnd() - 2) / 2;
+    const gy = (rnd() + rnd() + rnd() + rnd() - 2) / 2;
+    const x = Math.round(50 + gx * 46);
+    const y = Math.round(50 + gy * 42);
+    if(x < 2 || x > BOARD_SIZE - 4 || y < 8 || y > BOARD_SIZE - 10) continue;   // keep spawn rows clear
+    let free = true;
+    for(let dy = 0; dy < 2 && free; dy++)
+      for(let dx = 0; dx < 2 && free; dx++)
+        if(blocked.has(tileIdx(x + dx, y + dy))) free = false;
+    if(!free) continue;
+    const r = rnd();
+    const type = r < 0.4 ? "village" : r < 0.7 ? "well" : "mine";
+    const b = { id: buildings.length, type, x, y, owner: -1, garrison: [] };
+    buildings.push(b);
+    block(x, y, 2, 2, 1);
+    for(let dy = 0; dy < 2; dy++)
+      for(let dx = 0; dx < 2; dx++)
+        buildingMap.set(tileIdx(x + dx, y + dy), b);
+  }
+
+  return { size: BOARD_SIZE, terrain, zones, buildings, buildingMap };
+}
+
+function buildingAt(board, x, y){
+  return board.buildingMap.get(tileIdx(x, y)) || null;
+}
+
+function zoneAt(board, x, y){
+  for(const z of board.zones)
+    if(x >= z.x && x < z.x + 3 && y >= z.y && y < z.y + 3) return z;
+  return null;
+}
+</script>
+<script>
+"use strict";
+/* ────────────────────────────────────────────────────────────
+   CORE GAME STATE & BOARD-PHASE RULES
+   ──────────────────────────────────────────────────────────── */
+const WIN_CP        = 25;   // control points needed to win
+const START_AP      = 20;   // action points granted each turn
+const START_POWER   = 30;
+const POWER_CAP     = 99;
+const POWER_REGEN   = 5;    // base power regen per round
+const WELL_POWER    = 3;    // extra power per owned energy well per round
+const MINE_GOLD     = 3;    // gold per owned mine per round
+const VILLAGE_EVERY = 3;    // villages spawn a militia every N rounds
+const GARRISON_CAP  = 5;
+
+const G = {
+  phase: "title",           // title | deck | board | encounter | gameover
+  board: null,
+  players: [],
+  squadrons: [],
+  current: 0,               // whose turn (0 = BLUE, 1 = RED)
+  round: 1,
+  selected: null,           // selected squadron
+  mode: "idle",             // idle | split-dest | converge-pick
+  moveRange: null,          // Set<tileIdx> reachable this move
+  targets: null,            // Set<tileIdx> highlighted for split/converge
+  pendingSplit: null,       // unit indices chosen in the split modal
+  log: [],
+  winner: null,
+};
+let SQ_SEQ = 1;
+
+function mkPlayer(id, name, color){
+  return { id, name, color, ap: START_AP, power: START_POWER, gold: 0, cp: 0 };
+}
+
+function initGame(squadsP0, squadsP1){
+  G.board = generateBoard();
+  G.players = [mkPlayer(0, "BLUE", "#4aa3ff"), mkPlayer(1, "RED", "#ff5a5a")];
+  G.squadrons = [];
+  G.current = 0; G.round = 1; G.winner = null;
+  G.selected = null; G.mode = "idle"; G.moveRange = null; G.targets = null;
+  G.log = [];
+  const xs = [41, 47, 53, 59];                     // opposite ends of the map
+  squadsP0.forEach((ids, i) => spawnSquadron(0, xs[i], 2, ids));
+  squadsP1.forEach((ids, i) => spawnSquadron(1, xs[i], BOARD_SIZE - 3, ids));
+  G.phase = "board";
+  addLog(`Round 1 — BLUE moves first. First to ${WIN_CP} ◈ wins!`);
+}
+
+function spawnSquadron(owner, x, y, charIds){
+  G.squadrons.push({ id: SQ_SEQ++, owner, x, y, units: charIds.map(makeUnit) });
+}
+
+function squadronAt(x, y, excl){
+  return G.squadrons.find(s => s !== excl && s.x === x && s.y === y) || null;
+}
+
+/* Squadron speed = speed of its slowest member. */
+function squadSpeed(sq){
+  return Math.max(1, Math.min(...sq.units.map(u => u.speed)));
+}
+
+function totalUnits(pid){
+  let n = G.squadrons.filter(s => s.owner === pid).reduce((a, s) => a + s.units.length, 0);
+  for(const b of G.board.buildings) if(b.owner === pid) n += b.garrison.length;
+  return n;
+}
+
+function addLog(msg){
+  G.log.push(msg);
+  if(G.log.length > 40) G.log.shift();
+}
+
+/* ── Movement ─────────────────────────────────────────────── */
+/* BFS out to the squadron's speed. Friendly squadrons block;
+   enemy squadrons are valid end-points (→ encounter) but can't
+   be moved through. */
+function computeMoveRange(sq){
+  const speed = squadSpeed(sq);
+  const range = new Set();
+  const seen = new Set([tileIdx(sq.x, sq.y)]);
+  let frontier = [[sq.x, sq.y]];
+  for(let d = 1; d <= speed; d++){
+    const next = [];
+    for(const [x, y] of frontier){
+      for(const [dx, dy] of [[1,0],[-1,0],[0,1],[0,-1]]){
+        const nx = x + dx, ny = y + dy;
+        if(nx < 0 || ny < 0 || nx >= BOARD_SIZE || ny >= BOARD_SIZE) continue;
+        const ti = tileIdx(nx, ny);
+        if(seen.has(ti)) continue;
+        seen.add(ti);
+        const occ = squadronAt(nx, ny);
+        if(occ && occ.owner === sq.owner) continue;         // friendly: blocked
+        range.add(ti);
+        if(occ) continue;                                    // enemy: stop here
+        next.push([nx, ny]);
+      }
+    }
+    frontier = next;
+  }
+  return range;
+}
+
+function refreshSelection(){
+  const sq = G.selected;
+  G.moveRange = null;
+  if(sq && sq.owner === G.current && G.players[G.current].ap > 0 && G.phase === "board")
+    G.moveRange = computeMoveRange(sq);
+}
+
+function tryMoveTo(x, y){
+  const sq = G.selected;
+  const pl = G.players[G.current];
+  if(!sq || sq.owner !== G.current || !G.moveRange) return false;
+  if(!G.moveRange.has(tileIdx(x, y)) || pl.ap < 1) return false;
+  pl.ap -= 1;
+  sq.x = x; sq.y = y;
+  addLog(`${pl.name} squadron moved to (${x},${y}).`);
+  G.moveRange = null;
+  resolveArrival(sq);
+  if(G.phase === "board") refreshSelection();
+  return true;
+}
+
+/* What happens when a squadron lands on a tile. */
+function resolveArrival(sq){
+  const enemy = squadronAt(sq.x, sq.y, sq);
+  if(enemy && enemy.owner !== sq.owner){
+    startEncounter(sq, { type: "squadron", sq: enemy });
+    return;
+  }
+  const b = buildingAt(G.board, sq.x, sq.y);
+  if(!b) return;
+  if(b.owner === sq.owner) return;                          // already ours
+  if(b.owner >= 0 && b.garrison.length > 0){
+    startEncounter(sq, { type: "garrison", building: b }); // fight the garrison
+    return;
+  }
+  b.owner = sq.owner;                                       // unguarded → capture
+  addLog(`${G.players[sq.owner].name} occupied a ${buildingLabel(b.type)}!`);
+}
+
+function buildingLabel(type){
+  return type === "village" ? "Village 🏘" : type === "well" ? "Energy Well ⚡" : "Mine ⛏";
+}
+
+/* ── Split ────────────────────────────────────────────────── */
+function splitTargets(sq){
+  const t = new Set();
+  for(let dy = -1; dy <= 1; dy++)
+    for(let dx = -1; dx <= 1; dx++){
+      if(!dx && !dy) continue;
+      const nx = sq.x + dx, ny = sq.y + dy;
+      if(nx < 0 || ny < 0 || nx >= BOARD_SIZE || ny >= BOARD_SIZE) continue;
+      if(squadronAt(nx, ny)) continue;
+      t.add(tileIdx(nx, ny));
+    }
+  return t;
+}
+
+function doSplit(sq, unitIdxs, x, y){
+  const pl = G.players[G.current];
+  if(pl.ap < 1) return false;
+  if(unitIdxs.length < 1 || unitIdxs.length >= sq.units.length) return false;
+  pl.ap -= 1;
+  const moving = unitIdxs.map(i => sq.units[i]);
+  sq.units = sq.units.filter((u, i) => !unitIdxs.includes(i));
+  const nsq = { id: SQ_SEQ++, owner: sq.owner, x, y, units: moving };
+  G.squadrons.push(nsq);
+  addLog(`${pl.name} split off a squadron of ${moving.length}.`);
+  G.selected = nsq;
+  resolveArrival(nsq);
+  if(G.phase === "board") refreshSelection();
+  return true;
+}
+
+/* ── Converge ─────────────────────────────────────────────── */
+function convergeTargets(sq){
+  const t = new Set();
+  for(const o of G.squadrons){
+    if(o === sq || o.owner !== sq.owner) continue;
+    if(Math.abs(o.x - sq.x) <= 1 && Math.abs(o.y - sq.y) <= 1)
+      t.add(tileIdx(o.x, o.y));
+  }
+  return t;
+}
+
+/* Merged squadron sits on the tile of whichever had more troops. */
+function doConverge(a, b){
+  const pl = G.players[G.current];
+  if(pl.ap < 1) return false;
+  const big = b.units.length > a.units.length ? b : a;
+  const small = big === a ? b : a;
+  big.units = big.units.concat(small.units);
+  G.squadrons = G.squadrons.filter(s => s !== small);
+  pl.ap -= 1;
+  addLog(`${pl.name} squadrons converged (${big.units.length} units).`);
+  G.selected = big;
+  refreshSelection();
+  return true;
+}
+
+/* ── Garrison ─────────────────────────────────────────────── */
+function doGarrison(sq, unitIdxs){
+  const b = buildingAt(G.board, sq.x, sq.y);
+  if(!b || b.owner !== sq.owner) return false;
+  if(unitIdxs.length < 1 || unitIdxs.length >= sq.units.length) return false;
+  const staying = unitIdxs.map(i => sq.units[i]);
+  sq.units = sq.units.filter((u, i) => !unitIdxs.includes(i));
+  b.garrison = b.garrison.concat(staying);
+  addLog(`${G.players[sq.owner].name} left ${staying.length} unit(s) garrisoning the ${buildingLabel(b.type)}.`);
+  refreshSelection();
+  return true;
+}
+
+function collectGarrison(sq){
+  const b = buildingAt(G.board, sq.x, sq.y);
+  if(!b || b.owner !== sq.owner || !b.garrison.length) return false;
+  sq.units = sq.units.concat(b.garrison);
+  addLog(`${G.players[sq.owner].name} collected ${b.garrison.length} garrisoned unit(s).`);
+  b.garrison = [];
+  refreshSelection();
+  return true;
+}
+
+/* ── Turn flow ────────────────────────────────────────────── */
+function endTurn(){
+  if(G.phase !== "board") return;
+  G.selected = null; G.mode = "idle"; G.moveRange = null; G.targets = null;
+  if(G.current === 0){
+    G.current = 1;
+    G.players[1].ap = START_AP;
+    addLog(`— RED's turn —`);
+  } else {
+    endRound();
+    if(G.phase !== "gameover"){
+      G.current = 0;
+      G.players[0].ap = START_AP;
+      addLog(`— Round ${G.round}: BLUE's turn —`);
+    }
+  }
+  centerCameraOnPlayer(G.current);
+}
+
+/* Round upkeep: control points, resources, village spawns.
+   (Encounters halt this — the round only advances between turns.) */
+function endRound(){
+  for(const z of G.board.zones){
+    const owners = new Set();
+    for(let dy = 0; dy < 3; dy++)
+      for(let dx = 0; dx < 3; dx++){
+        const s = squadronAt(z.x + dx, z.y + dy);
+        if(s) owners.add(s.owner);
+      }
+    if(owners.size === 1){
+      const o = [...owners][0];
+      G.players[o].cp++;
+      addLog(`${G.players[o].name} holds a zone: +1 ◈ (${G.players[o].cp}).`);
+    }
+  }
+  for(const p of G.players)
+    p.power = Math.min(POWER_CAP, p.power + POWER_REGEN);
+  for(const b of G.board.buildings){
+    if(b.owner < 0) continue;
+    const p = G.players[b.owner];
+    if(b.type === "well") p.power = Math.min(POWER_CAP, p.power + WELL_POWER);
+    else if(b.type === "mine") p.gold += MINE_GOLD;
+    else if(b.type === "village" && G.round % VILLAGE_EVERY === 0 && b.garrison.length < GARRISON_CAP){
+      b.garrison.push(makeUnit("militia"));
+      addLog(`${p.name}'s village trained a Militia 👨‍🌾.`);
+    }
+  }
+  G.round++;
+  checkWin();
+}
+
+function checkWin(){
+  if(G.phase === "gameover") return;
+  for(const p of G.players)
+    if(p.cp >= WIN_CP) return gameOver(p.id, `reached ${WIN_CP} Control Points`);
+  const a0 = totalUnits(0), a1 = totalUnits(1);
+  if(a0 === 0 && a1 > 0) return gameOver(1, "destroyed every enemy unit");
+  if(a1 === 0 && a0 > 0) return gameOver(0, "destroyed every enemy unit");
+}
+
+function gameOver(pid, why){
+  G.phase = "gameover";
+  G.winner = pid;
+  addLog(`${G.players[pid].name} WINS — ${why}!`);
+  showGameOver(pid, why);
+}
+</script>
+<script>
+"use strict";
+/* ────────────────────────────────────────────────────────────
+   ENCOUNTERS — Pokémon-style battles.
+   Both teams predetermine every unit's move each round, then
+   the moves resolve in agility order. Moves cost ⚡Power from
+   the owning player's pool; with no power a unit simply cannot
+   act that battle round. Encounters halt the board turn count.
+   ──────────────────────────────────────────────────────────── */
+const BATTLE_ROUND_REGEN = 6;   // power trickle per battle round so fights keep moving
+
+const ENC = {
+  active: false,
+  teams: null,          // [{playerId, label, units:[{unit, from}], choices:{uid:{m,t}}}]
+  context: null,        // { attackSq, defSq, building }
+  phase: "select",      // select | over
+  selTeam: 0,
+  round: 1,
+  result: null,         // winning team index
+  logLines: [],
+};
+
+function startEncounter(attackSq, defense){
+  G.phase = "encounter";
+  G.mode = "idle"; G.moveRange = null; G.targets = null;
+  ENC.active = true; ENC.round = 1; ENC.phase = "select"; ENC.selTeam = 0;
+  ENC.result = null; ENC.logLines = [];
+
+  let defUnits = [], defOwner, defSq = null, building = null;
+  if(defense.type === "squadron"){
+    defSq = defense.sq; defOwner = defSq.owner;
+    defSq.units.forEach(u => defUnits.push({ unit: u, from: { sq: defSq } }));
+    /* defenders standing on their own building fight alongside its garrison */
+    const b = buildingAt(G.board, defSq.x, defSq.y);
+    if(b && b.owner === defOwner && b.garrison.length){
+      building = b;
+      b.garrison.forEach(u => defUnits.push({ unit: u, from: { building: b } }));
+    }
+  } else {
+    building = defense.building; defOwner = building.owner;
+    building.garrison.forEach(u => defUnits.push({ unit: u, from: { building } }));
+  }
+
+  ENC.context = { attackSq, defSq, building };
+  ENC.teams = [
+    { playerId: attackSq.owner, label: `${G.players[attackSq.owner].name} (ATTACKER)`,
+      units: attackSq.units.map(u => ({ unit: u, from: { sq: attackSq } })), choices: {} },
+    { playerId: defOwner, label: `${G.players[defOwner].name} (DEFENDER${defSq ? "" : " GARRISON"})`,
+      units: defUnits, choices: {} },
+  ];
+  encLog(`⚔ Encounter at (${attackSq.x},${attackSq.y})! Turn count is halted until it resolves.`);
+  initChoices(0); initChoices(1);
+  openEncounterModal();
+}
+
+function livingUnits(ti){ return ENC.teams[ti].units.filter(b => b.unit.hp > 0); }
+
+function initChoices(ti){
+  const team = ENC.teams[ti];
+  team.choices = {};
+  for(const bu of livingUnits(ti)){
+    const move = bu.unit.moves[0];
+    team.choices[bu.unit.uid] = { m: 0, t: defaultTarget(ti, move) };
+  }
+}
+
+function defaultTarget(ti, move){
+  const pool = move.heal != null ? livingUnits(ti) : livingUnits(1 - ti);
+  return pool.length ? pool[0].unit.uid : null;
+}
+
+function encLog(msg){
+  ENC.logLines.push(msg);
+  const el = document.getElementById("enc-log");
+  if(el){
+    const d = document.createElement("div");
+    d.textContent = msg;
+    el.appendChild(d);
+    el.scrollTop = el.scrollHeight;
+  }
+}
+
+function encLockIn(){
+  if(ENC.phase !== "select") return;
+  if(ENC.selTeam === 0){
+    ENC.selTeam = 1;
+    renderEncounter();
+  } else {
+    resolveBattleRound();
+  }
+}
+
+/* Resolve one battle round: all chosen moves, in agility order. */
+function resolveBattleRound(){
+  encLog(`── Battle round ${ENC.round} ──`);
+  const acts = [];
+  ENC.teams.forEach((team, ti) => {
+    for(const bu of team.units){
+      if(bu.unit.hp <= 0) continue;
+      const ch = team.choices[bu.unit.uid];
+      if(ch) acts.push({ bu, team, ti, ch });
+    }
+  });
+  acts.sort((a, b) => (b.bu.unit.agility - a.bu.unit.agility) || (Math.random() - 0.5));
+
+  for(const a of acts){
+    const u = a.bu.unit;
+    if(u.hp <= 0) continue;                              // KO'd earlier this round
+    const move = u.moves[a.ch.m];
+    const pl = G.players[a.team.playerId];
+    if(pl.power < move.cost){
+      encLog(`${u.icon} ${u.name} has no power — cannot move!`);
+      continue;
+    }
+    pl.power -= move.cost;
+    if(move.dmg != null){
+      const foes = ENC.teams[1 - a.ti].units;
+      let tgt = foes.find(b => b.unit.uid === a.ch.t && b.unit.hp > 0)
+             || foes.find(b => b.unit.hp > 0);
+      if(!tgt){ encLog(`${u.icon} ${u.name} finds no target.`); continue; }
+      const dmg = Math.max(1, move.dmg - tgt.unit.def);
+      tgt.unit.hp = Math.max(0, tgt.unit.hp - dmg);
+      encLog(`${u.icon} ${u.name} used ${move.name} on ${tgt.unit.icon} ${tgt.unit.name} — ${dmg} dmg${tgt.unit.hp <= 0 ? "  ✖ KO!" : ""}`);
+    } else {
+      const allies = a.team.units;
+      let tgt = allies.find(b => b.unit.uid === a.ch.t && b.unit.hp > 0) || a.bu;
+      const amt = Math.min(move.heal, tgt.unit.maxHp - tgt.unit.hp);
+      tgt.unit.hp += amt;
+      encLog(`${u.icon} ${u.name} used ${move.name} — ${tgt.unit.icon} ${tgt.unit.name} +${amt} HP`);
+    }
+  }
+
+  const dead0 = livingUnits(0).length === 0;
+  const dead1 = livingUnits(1).length === 0;
+  if(dead0 || dead1){
+    ENC.phase = "over";
+    ENC.result = dead0 && dead1 ? -1 : dead0 ? 1 : 0;
+    encLog(ENC.result === -1 ? "☠ Both sides were wiped out!"
+         : `🏆 ${ENC.teams[ENC.result].label} wins the encounter!`);
+  } else {
+    ENC.round++;
+    for(const t of ENC.teams){
+      const p = G.players[t.playerId];
+      p.power = Math.min(POWER_CAP, p.power + BATTLE_ROUND_REGEN);
+    }
+    ENC.selTeam = 0;
+    initChoices(0); initChoices(1);
+  }
+  renderEncounter();
+}
+
+/* Apply the battle outcome back to the board. */
+function finishEncounter(){
+  const { attackSq, defSq, building } = ENC.context;
+  for(const team of ENC.teams){
+    for(const bu of team.units){
+      if(bu.unit.hp > 0) continue;
+      if(bu.from.sq) bu.from.sq.units = bu.from.sq.units.filter(u => u !== bu.unit);
+      else bu.from.building.garrison = bu.from.building.garrison.filter(u => u !== bu.unit);
+    }
+  }
+  const atkAlive = livingUnits(0).length > 0;
+  const defAlive = livingUnits(1).length > 0;
+  G.squadrons = G.squadrons.filter(s => s.units.length > 0);
+  if(atkAlive && !defAlive){
+    if(building){
+      building.owner = attackSq.owner;
+      building.garrison = [];
+      addLog(`${G.players[attackSq.owner].name} captured the ${buildingLabel(building.type)}!`);
+    }
+    addLog(`${G.players[attackSq.owner].name} won the encounter.`);
+  } else if(!atkAlive && defAlive){
+    addLog(`The attacking squadron was wiped out.`);
+  } else if(!atkAlive && !defAlive){
+    addLog(`Both squadrons were destroyed in the encounter.`);
+  }
+  ENC.active = false;
+  G.phase = "board";
+  closeEncounterModal();
+  G.selected = atkAlive && G.squadrons.includes(attackSq) ? attackSq : null;
+  refreshSelection();
+  checkWin();
+  refreshSidebar();
+}
+
+/* ── Encounter modal DOM ─────────────────────────────────── */
+function openEncounterModal(){
+  document.getElementById("enc-log").innerHTML = "";
+  for(const line of ENC.logLines) encLog2(line);
+  document.getElementById("modal-encounter").classList.remove("hidden");
+  renderEncounter();
+}
+function encLog2(msg){ /* replay without re-pushing */
+  const el = document.getElementById("enc-log");
+  const d = document.createElement("div");
+  d.textContent = msg; el.appendChild(d);
+}
+function closeEncounterModal(){
+  document.getElementById("modal-encounter").classList.add("hidden");
+}
+
+function renderEncounter(){
+  document.getElementById("enc-title").textContent =
+    `⚔ ENCOUNTER — Battle Round ${ENC.round}`;
+  const p0 = G.players[ENC.teams[0].playerId], p1 = G.players[ENC.teams[1].playerId];
+  document.getElementById("enc-power").innerHTML =
+    `<span style="color:${p0.color}">${p0.name} ⚡${p0.power}</span> &nbsp;·&nbsp; ` +
+    `<span style="color:${p1.color}">${p1.name} ⚡${p1.power}</span>`;
+
+  ENC.teams.forEach((team, ti) => {
+    const pl = G.players[team.playerId];
+    const head = document.getElementById(`enc-h-${ti}`);
+    head.textContent = team.label +
+      (ENC.phase === "select" ? (ENC.selTeam === ti ? " — PICK MOVES" : (ti < ENC.selTeam ? " — LOCKED ✓" : " — WAITING")) : "");
+    head.style.color = pl.color;
+    document.getElementById(`enc-team-${ti}`).classList.toggle("active-team",
+      ENC.phase === "select" && ENC.selTeam === ti);
+
+    const box = document.getElementById(`enc-units-${ti}`);
+    box.innerHTML = "";
+    for(const bu of team.units){
+      const u = bu.unit;
+      const row = document.createElement("div");
+      row.className = "enc-row" + (u.hp <= 0 ? " dead" : "");
+      const pct = Math.round(100 * u.hp / u.maxHp);
+      row.innerHTML =
+        `<span class="enc-icon">${u.icon}</span>` +
+        `<span class="enc-name">${u.name}${u.commander ? " ★" : ""}` +
+        `<span class="bar"><span class="fill" style="width:${pct}%;background:${pct > 50 ? "#5fd45f" : pct > 25 ? "#ffd24a" : "#ff5a5a"}"></span></span>` +
+        `<span class="hp-num">${u.hp}/${u.maxHp} · AGI ${u.agility} · DEF ${u.def}</span></span>`;
+      if(u.hp > 0 && ENC.phase === "select" && ENC.selTeam === ti){
+        const ch = team.choices[u.uid];
+        const mv = document.createElement("select");
+        u.moves.forEach((m, i) => {
+          const o = document.createElement("option");
+          o.value = i;
+          o.textContent = `${m.name} (⚡${m.cost} ${m.dmg != null ? "DMG " + m.dmg : "HEAL " + m.heal})`;
+          mv.appendChild(o);
+        });
+        mv.value = ch.m;
+        const tg = document.createElement("select");
+        const fillTargets = () => {
+          tg.innerHTML = "";
+          const move = u.moves[+mv.value];
+          const pool = move.heal != null ? livingUnits(ti) : livingUnits(1 - ti);
+          for(const p of pool){
+            const o = document.createElement("option");
+            o.value = p.unit.uid;
+            o.textContent = `${p.unit.icon} ${p.unit.name} (${p.unit.hp}hp)`;
+            tg.appendChild(o);
+          }
+          if(pool.some(p => p.unit.uid === ch.t)) tg.value = ch.t;
+          else if(pool.length){ tg.value = pool[0].unit.uid; ch.t = pool[0].unit.uid; }
+        };
+        fillTargets();
+        mv.addEventListener("change", () => { ch.m = +mv.value; ch.t = defaultTarget(ti, u.moves[ch.m]); fillTargets(); });
+        tg.addEventListener("change", () => { ch.t = +tg.value; });
+        row.appendChild(mv);
+        row.appendChild(tg);
+      } else if(u.hp > 0 && ENC.phase === "select" && ti < ENC.selTeam){
+        const lock = document.createElement("span");
+        lock.className = "dim"; lock.textContent = "locked ✓";
+        row.appendChild(lock);
+      }
+      box.appendChild(row);
+    }
+  });
+
+  document.getElementById("btn-enc-lock").classList.toggle("hidden", ENC.phase !== "select");
+  document.getElementById("btn-enc-lock").textContent =
+    ENC.selTeam === 0 ? "LOCK IN MOVES ▶ (then defender picks)" : "FIGHT!";
+  document.getElementById("btn-enc-close").classList.toggle("hidden", ENC.phase !== "over");
+}
+</script>
+<script>
+"use strict";
+/* ────────────────────────────────────────────────────────────
+   CANVAS RENDERER — chunky pixels for a retro feel.
+   Terrain is pre-baked to a 100×100 offscreen canvas (1px per
+   tile) and blown up with image smoothing off.
+   ──────────────────────────────────────────────────────────── */
+const CAM = { x: 50, y: 50, z: 12 };   // z = pixels per tile
+const ZOOM_MIN = 4, ZOOM_MAX = 28;
+
+const TERRAIN_COLORS = ["#3e6e34", "#457a3a", "#37622e", "#2c5226"];
+const BUILDING_COLORS = { village: "#c9824e", well: "#3fb8c9", mine: "#8f8f9c" };
+const BUILDING_ICONS  = { village: "🏘", well: "⚡", mine: "⛏" };
+
+let boardCanvas, bctx, miniCanvas, mctx, terrainCache = null;
+
+function initRenderer(){
+  boardCanvas = document.getElementById("board-canvas");
+  bctx = boardCanvas.getContext("2d");
+  miniCanvas = document.getElementById("minimap");
+  mctx = miniCanvas.getContext("2d");
+  requestAnimationFrame(drawFrame);
+}
+
+function buildTerrainCache(){
+  terrainCache = document.createElement("canvas");
+  terrainCache.width = BOARD_SIZE; terrainCache.height = BOARD_SIZE;
+  const c = terrainCache.getContext("2d");
+  for(let y = 0; y < BOARD_SIZE; y++)
+    for(let x = 0; x < BOARD_SIZE; x++){
+      c.fillStyle = TERRAIN_COLORS[G.board.terrain[tileIdx(x, y)]];
+      c.fillRect(x, y, 1, 1);
+    }
+}
+
+function centerCameraOnPlayer(pid){
+  const sq = G.squadrons.find(s => s.owner === pid);
+  if(sq){ CAM.x = sq.x + 0.5; CAM.y = sq.y + 0.5; }
+}
+
+function tileFromEvent(e){
+  const r = boardCanvas.getBoundingClientRect();
+  const px = e.clientX - r.left, py = e.clientY - r.top;
+  return [
+    Math.floor(CAM.x + (px - r.width / 2) / CAM.z),
+    Math.floor(CAM.y + (py - r.height / 2) / CAM.z),
+  ];
+}
+
+function drawFrame(){
+  requestAnimationFrame(drawFrame);
+  if(!boardCanvas) return;
+  const holder = boardCanvas.parentElement;
+  if(boardCanvas.width !== holder.clientWidth - 260 || boardCanvas.height !== holder.clientHeight){
+    boardCanvas.width  = Math.max(100, holder.clientWidth - 260);
+    boardCanvas.height = Math.max(100, holder.clientHeight);
+  }
+  const w = boardCanvas.width, h = boardCanvas.height;
+  bctx.fillStyle = "#0e0b16";
+  bctx.fillRect(0, 0, w, h);
+  if(!G.board || (G.phase !== "board" && G.phase !== "encounter" && G.phase !== "gameover")) return;
+
+  CAM.x = Math.max(0, Math.min(BOARD_SIZE, CAM.x));
+  CAM.y = Math.max(0, Math.min(BOARD_SIZE, CAM.y));
+  const z = CAM.z;
+  const ox = w / 2 - CAM.x * z, oy = h / 2 - CAM.y * z;
+  const px = (x) => Math.round(ox + x * z);
+  const py = (y) => Math.round(oy + y * z);
+
+  /* terrain */
+  bctx.imageSmoothingEnabled = false;
+  if(terrainCache) bctx.drawImage(terrainCache, ox, oy, BOARD_SIZE * z, BOARD_SIZE * z);
+  /* board border */
+  bctx.strokeStyle = "#000";
+  bctx.lineWidth = 3;
+  bctx.strokeRect(px(0), py(0), BOARD_SIZE * z, BOARD_SIZE * z);
+
+  /* zones */
+  for(const zone of G.board.zones){
+    const owners = new Set();
+    for(let dy = 0; dy < 3; dy++)
+      for(let dx = 0; dx < 3; dx++){
+        const s = squadronAt(zone.x + dx, zone.y + dy);
+        if(s) owners.add(s.owner);
+      }
+    let col = "255,210,74";
+    if(owners.size === 1) col = [...owners][0] === 0 ? "74,163,255" : "255,90,90";
+    bctx.fillStyle = `rgba(${col},0.25)`;
+    bctx.fillRect(px(zone.x), py(zone.y), 3 * z, 3 * z);
+    bctx.strokeStyle = `rgba(${col},0.9)`;
+    bctx.lineWidth = 2;
+    bctx.strokeRect(px(zone.x) + 1, py(zone.y) + 1, 3 * z - 2, 3 * z - 2);
+  }
+
+  /* buildings (2×2) */
+  for(const b of G.board.buildings){
+    bctx.fillStyle = BUILDING_COLORS[b.type];
+    bctx.fillRect(px(b.x), py(b.y), 2 * z, 2 * z);
+    bctx.strokeStyle = b.owner < 0 ? "rgba(0,0,0,0.55)" : G.players[b.owner].color;
+    bctx.lineWidth = b.owner < 0 ? 1 : 3;
+    bctx.strokeRect(px(b.x) + 1, py(b.y) + 1, 2 * z - 2, 2 * z - 2);
+    if(z >= 7){
+      bctx.font = `${Math.floor(z * 1.1)}px sans-serif`;
+      bctx.textAlign = "center"; bctx.textBaseline = "middle";
+      bctx.fillText(BUILDING_ICONS[b.type], px(b.x) + z, py(b.y) + z);
+      if(b.garrison.length && z >= 9){
+        bctx.font = `bold ${Math.floor(z * 0.7)}px monospace`;
+        bctx.fillStyle = "#fff";
+        bctx.fillText("g" + b.garrison.length, px(b.x) + 2 * z - z * 0.5, py(b.y) + 2 * z - z * 0.45);
+      }
+    }
+  }
+
+  /* move range */
+  if(G.moveRange && G.phase === "board"){
+    bctx.fillStyle = "rgba(255,255,255,0.28)";
+    for(const ti of G.moveRange){
+      const x = ti % BOARD_SIZE, y = Math.floor(ti / BOARD_SIZE);
+      bctx.fillRect(px(x), py(y), z, z);
+    }
+  }
+  /* split / converge targets */
+  if(G.targets && G.phase === "board"){
+    bctx.fillStyle = "rgba(95,212,95,0.45)";
+    for(const ti of G.targets){
+      const x = ti % BOARD_SIZE, y = Math.floor(ti / BOARD_SIZE);
+      bctx.fillRect(px(x), py(y), z, z);
+    }
+  }
+
+  /* squadrons */
+  for(const sq of G.squadrons){
+    const inset = Math.max(1, Math.round(z * 0.12));
+    const sx = px(sq.x) + inset, sy = py(sq.y) + inset, sz = z - inset * 2;
+    bctx.fillStyle = G.players[sq.owner].color;
+    bctx.fillRect(sx, sy, sz, sz);
+    bctx.strokeStyle = sq === G.selected ? "#ffffff" : "#0d0a14";
+    bctx.lineWidth = sq === G.selected ? 3 : 2;
+    bctx.strokeRect(sx, sy, sz, sz);
+    if(z >= 8){
+      const cmd = sq.units.find(u => u.commander);
+      bctx.textAlign = "center"; bctx.textBaseline = "middle";
+      if(z >= 16 && cmd){
+        bctx.font = `${Math.floor(z * 0.62)}px sans-serif`;
+        bctx.fillText(cmd.icon, px(sq.x) + z / 2, py(sq.y) + z * 0.38);
+        bctx.font = `bold ${Math.floor(z * 0.42)}px monospace`;
+        bctx.fillStyle = "#fff";
+        bctx.fillText(String(sq.units.length), px(sq.x) + z / 2, py(sq.y) + z * 0.78);
+      } else {
+        bctx.font = `bold ${Math.floor(z * 0.55)}px monospace`;
+        bctx.fillStyle = "#fff";
+        bctx.fillText(String(sq.units.length), px(sq.x) + z / 2, py(sq.y) + z / 2);
+      }
+    }
+  }
+
+  drawMinimap();
+}
+
+function drawMinimap(){
+  if(!G.board) return;
+  const s = 1.5;
+  mctx.imageSmoothingEnabled = false;
+  mctx.fillStyle = "#0e0b16";
+  mctx.fillRect(0, 0, 150, 150);
+  if(terrainCache) mctx.drawImage(terrainCache, 0, 0, 150, 150);
+  for(const zone of G.board.zones){
+    mctx.fillStyle = "#ffd24a";
+    mctx.fillRect(zone.x * s, zone.y * s, 3 * s, 3 * s);
+  }
+  for(const b of G.board.buildings){
+    mctx.fillStyle = b.owner < 0 ? "#e8e0d0" : G.players[b.owner].color;
+    mctx.fillRect(b.x * s, b.y * s, 2 * s, 2 * s);
+  }
+  for(const sq of G.squadrons){
+    mctx.fillStyle = G.players[sq.owner].color;
+    mctx.fillRect(sq.x * s - 1, sq.y * s - 1, 4, 4);
+  }
+  /* viewport rectangle */
+  const vw = boardCanvas.width / CAM.z, vh = boardCanvas.height / CAM.z;
+  mctx.strokeStyle = "#ffffff";
+  mctx.lineWidth = 1;
+  mctx.strokeRect((CAM.x - vw / 2) * s, (CAM.y - vh / 2) * s, vw * s, vh * s);
+}
+</script>
+<script>
+"use strict";
+/* ────────────────────────────────────────────────────────────
+   UI — sidebar, deck builder, split/garrison/game-over modals.
+   ──────────────────────────────────────────────────────────── */
+function el(id){ return document.getElementById(id); }
+
+function showScreen(name){
+  for(const s of ["screen-title", "screen-deck", "screen-game"])
+    el(s).classList.toggle("hidden", s !== "screen-" + name);
+}
+
+/* ── Sidebar ─────────────────────────────────────────────── */
+function refreshSidebar(){
+  if(G.phase === "title" || G.phase === "deck") return;
+  const cur = G.players[G.current];
+  const banner = el("turn-banner");
+  banner.textContent = `${cur.name} TURN`;
+  banner.style.background = cur.color;
+  el("stat-round").textContent = G.round;
+
+  for(const p of G.players){
+    el(`p${p.id}-cp`).textContent = `${p.cp}/${WIN_CP}`;
+    el(`p${p.id}-ap`).textContent = p.id === G.current ? p.ap : "–";
+    el(`p${p.id}-power`).textContent = p.power;
+    el(`p${p.id}-gold`).textContent = p.gold;
+    el(`p${p.id}-units`).textContent = totalUnits(p.id);
+    el(`pbox-${p.id}`).classList.toggle("current", p.id === G.current);
+  }
+
+  /* selected squadron panel */
+  const sp = el("sel-panel");
+  const sq = G.selected;
+  if(!sq){
+    sp.innerHTML = `<div class="dim">No squadron selected.<br>Click one of your squadrons.</div>`;
+  } else {
+    const mine = sq.owner === G.current;
+    let html = `<div class="sel-head" style="color:${G.players[sq.owner].color}">` +
+      `${G.players[sq.owner].name} SQUADRON — (${sq.x},${sq.y})</div>` +
+      `<div class="sel-sub">SPD ${squadSpeed(sq)} · ${sq.units.length} units` +
+      `${mine ? " · click a lit tile to move (1 AP)" : " · enemy (view only)"}</div>`;
+    for(const u of sq.units){
+      const pct = Math.round(100 * u.hp / u.maxHp);
+      html += `<div class="sel-unit">${u.icon} ${u.name}${u.commander ? " ★" : ""}` +
+        `<span class="bar"><span class="fill" style="width:${pct}%;background:${pct > 50 ? "#5fd45f" : pct > 25 ? "#ffd24a" : "#ff5a5a"}"></span></span>` +
+        `<span class="hp-num">${u.hp}/${u.maxHp}</span></div>`;
+    }
+    const b = buildingAt(G.board, sq.x, sq.y);
+    if(b) html += `<div class="sel-sub">On ${buildingLabel(b.type)} — ` +
+      `${b.owner < 0 ? "unclaimed" : G.players[b.owner].name}` +
+      `${b.garrison.length ? ` (garrison ${b.garrison.length})` : ""}</div>`;
+    sp.innerHTML = html;
+  }
+
+  /* action buttons */
+  const pl = G.players[G.current];
+  const mine = sq && sq.owner === G.current && G.phase === "board";
+  const b = sq ? buildingAt(G.board, sq.x, sq.y) : null;
+  el("btn-split").disabled    = !(mine && sq.units.length >= 2 && pl.ap >= 1);
+  el("btn-converge").disabled = !(mine && pl.ap >= 1 && convergeTargets(sq).size > 0);
+  el("btn-garrison").disabled = !(mine && b && b.owner === sq.owner && sq.units.length >= 2);
+  el("btn-collect").disabled  = !(mine && b && b.owner === sq.owner && b.garrison.length > 0);
+  el("btn-endturn").disabled  = G.phase !== "board";
+
+  el("mode-hint").textContent =
+    G.mode === "split-dest"    ? "▶ Click a green tile for the new squadron (Esc cancels)" :
+    G.mode === "converge-pick" ? "▶ Click a highlighted friendly squadron to merge (Esc cancels)" : "";
+
+  el("game-log").innerHTML = G.log.slice(-8).map(l => `<div>${l}</div>`).join("");
+  el("game-log").scrollTop = el("game-log").scrollHeight;
+}
+
+/* ── Deck builder ────────────────────────────────────────── */
+const DECK = { player: 0, squads: null, decks: [null, null] };
+
+function emptySquads(){ return [0, 1, 2, 3].map(() => [null, null, null, null, null]); }
+
+function openDeckBuilder(player){
+  DECK.player = player;
+  DECK.squads = emptySquads();
+  el("deck-title").textContent = `PLAYER ${player + 1} (${player === 0 ? "BLUE" : "RED"}) — BUILD YOUR DECK`;
+  el("deck-title").style.color = player === 0 ? "#4aa3ff" : "#ff5a5a";
+  el("btn-deck-copy").classList.toggle("hidden", player === 0);
+  el("deck-msg").textContent = "";
+  showScreen("deck");
+  renderRoster();
+  renderSquadGrid();
+}
+
+function renderRoster(){
+  const grid = el("roster-grid");
+  grid.innerHTML = "";
+  const sorted = [...CHARACTERS].sort((a, b) => (b.commander ? 1 : 0) - (a.commander ? 1 : 0));
+  for(const c of sorted){
+    const card = document.createElement("div");
+    card.className = "char-card" + (c.commander ? " cmd" : "");
+    card.innerHTML =
+      `<div class="cc-icon">${c.icon}</div>` +
+      `<div class="cc-name">${c.name}${c.commander ? " ★" : ""}</div>` +
+      `<div class="cc-stats">HP${c.hp} SPD${c.speed} AGI${c.agility} DEF${c.def}</div>` +
+      `<div class="cc-moves">${c.moves.map(m => `${m.name} ⚡${m.cost} ${m.dmg != null ? "×" + m.dmg : "+`" + m.heal + "`hp"}`).join("<br>").replaceAll("`", "")}</div>`;
+    card.addEventListener("click", () => addToDeck(c));
+    grid.appendChild(card);
+  }
+}
+
+function addToDeck(c){
+  for(const squad of DECK.squads){
+    if(c.commander){
+      if(squad[0] === null){ squad[0] = c.id; renderSquadGrid(); return; }
+    } else {
+      for(let i = 1; i < 5; i++)
+        if(squad[i] === null){ squad[i] = c.id; renderSquadGrid(); return; }
+    }
+  }
+  flashDeckMsg(c.commander ? "All 4 commander slots are full." : "All regular slots are full.");
+}
+
+function renderSquadGrid(){
+  const grid = el("squad-grid");
+  grid.innerHTML = "";
+  DECK.squads.forEach((squad, si) => {
+    const col = document.createElement("div");
+    col.className = "squad-col";
+    col.innerHTML = `<div class="squad-label">SQUADRON ${si + 1}</div>`;
+    squad.forEach((id, i) => {
+      const slot = document.createElement("div");
+      slot.className = "deck-slot" + (i === 0 ? " cmd-slot" : "");
+      if(id){
+        const c = CHAR_BY_ID[id];
+        slot.innerHTML = `<div class="cc-icon">${c.icon}</div><div class="cc-name">${c.name}</div>`;
+        slot.title = "Click to remove";
+        slot.addEventListener("click", () => { squad[i] = null; renderSquadGrid(); });
+      } else {
+        slot.innerHTML = `<div class="slot-empty">${i === 0 ? "★" : "+"}</div>`;
+      }
+      col.appendChild(slot);
+    });
+    grid.appendChild(col);
+  });
+}
+
+function flashDeckMsg(msg){
+  el("deck-msg").textContent = msg;
+  setTimeout(() => { if(el("deck-msg").textContent === msg) el("deck-msg").textContent = ""; }, 2500);
+}
+
+function confirmDeck(){
+  for(const squad of DECK.squads)
+    if(squad.some(s => s === null))
+      return flashDeckMsg("Every squadron needs 5 units (★ slot = commander).");
+  DECK.decks[DECK.player] = DECK.squads.map(s => [...s]);
+  if(DECK.player === 0) openDeckBuilder(1);
+  else startGame(DECK.decks[0], DECK.decks[1]);
+}
+
+/* ── Split & garrison modals ─────────────────────────────── */
+function openUnitPicker(modalId, listId, sq){
+  const list = el(listId);
+  list.innerHTML = "";
+  sq.units.forEach((u, i) => {
+    const row = document.createElement("label");
+    row.className = "check-row";
+    row.innerHTML = `<input type="checkbox" data-i="${i}"> ${u.icon} ${u.name}${u.commander ? " ★" : ""} <span class="dim">(${u.hp}/${u.maxHp}hp SPD${u.speed})</span>`;
+    list.appendChild(row);
+  });
+  el(modalId).classList.remove("hidden");
+}
+function pickedIndices(listId){
+  return [...el(listId).querySelectorAll("input:checked")].map(c => +c.dataset.i);
+}
+
+function openSplitModal(){
+  if(!G.selected) return;
+  openUnitPicker("modal-split", "split-list", G.selected);
+}
+function confirmSplitPick(){
+  const idxs = pickedIndices("split-list");
+  const sq = G.selected;
+  if(idxs.length < 1) return;
+  if(idxs.length >= sq.units.length) return;
+  el("modal-split").classList.add("hidden");
+  G.pendingSplit = idxs;
+  G.mode = "split-dest";
+  G.targets = splitTargets(sq);
+  G.moveRange = null;
+  refreshSidebar();
+}
+
+function openGarrisonModal(){
+  if(!G.selected) return;
+  openUnitPicker("modal-garrison", "gar-list", G.selected);
+}
+function confirmGarrisonPick(){
+  const idxs = pickedIndices("gar-list");
+  const sq = G.selected;
+  if(idxs.length < 1 || idxs.length >= sq.units.length) return;
+  el("modal-garrison").classList.add("hidden");
+  doGarrison(sq, idxs);
+  refreshSidebar();
+}
+
+function startConverge(){
+  if(!G.selected) return;
+  G.targets = convergeTargets(G.selected);
+  if(!G.targets.size){ G.targets = null; return; }
+  G.mode = "converge-pick";
+  G.moveRange = null;
+  refreshSidebar();
+}
+
+function cancelMode(){
+  G.mode = "idle";
+  G.targets = null;
+  G.pendingSplit = null;
+  refreshSelection();
+  refreshSidebar();
+}
+
+/* ── Game over ───────────────────────────────────────────── */
+function showGameOver(pid, why){
+  el("go-title").textContent = `${G.players[pid].name} WINS!`;
+  el("go-title").style.color = G.players[pid].color;
+  el("go-sub").textContent = `${G.players[pid].name} ${why} after ${G.round - 1} round(s).`;
+  el("modal-gameover").classList.remove("hidden");
+  refreshSidebar();
+}
+</script>
+<script>
+"use strict";
+/* ────────────────────────────────────────────────────────────
+   MAIN — bootstrapping & input wiring.
+   ──────────────────────────────────────────────────────────── */
+function startGame(squadsP0, squadsP1){
+  initGame(squadsP0, squadsP1);
+  buildTerrainCache();
+  showScreen("game");
+  centerCameraOnPlayer(0);
+  CAM.z = 12;
+  refreshSidebar();
+}
+
+function onBoardClick(x, y){
+  if(G.phase !== "board") return;
+  if(x < 0 || y < 0 || x >= BOARD_SIZE || y >= BOARD_SIZE) return;
+  const ti = tileIdx(x, y);
+
+  if(G.mode === "split-dest"){
+    if(G.targets && G.targets.has(ti) && G.pendingSplit){
+      const idxs = G.pendingSplit;
+      G.mode = "idle"; G.targets = null; G.pendingSplit = null;
+      doSplit(G.selected, idxs, x, y);
+    } else cancelMode();
+    refreshSidebar();
+    return;
+  }
+  if(G.mode === "converge-pick"){
+    const t = squadronAt(x, y);
+    if(t && G.targets && G.targets.has(ti) && t.owner === G.current){
+      G.mode = "idle"; G.targets = null;
+      doConverge(G.selected, t);
+    } else cancelMode();
+    refreshSidebar();
+    return;
+  }
+
+  const sq = squadronAt(x, y);
+  if(sq && sq.owner === G.current){
+    G.selected = sq;
+    refreshSelection();
+  } else if(G.selected && G.selected.owner === G.current && G.moveRange && G.moveRange.has(ti)){
+    tryMoveTo(x, y);
+  } else if(sq){
+    G.selected = sq;               // inspect enemy squadron
+    G.moveRange = null;
+  } else {
+    G.selected = null;
+    G.moveRange = null;
+  }
+  refreshSidebar();
+}
+
+window.addEventListener("DOMContentLoaded", () => {
+  initRenderer();
+  el("title-wincp").textContent = WIN_CP;
+
+  /* title screen */
+  el("btn-build").addEventListener("click", () => openDeckBuilder(0));
+  el("btn-quick").addEventListener("click", () => startGame(randomSquads(), randomSquads()));
+
+  /* deck builder */
+  el("btn-deck-random").addEventListener("click", () => { DECK.squads = randomSquads(); renderSquadGrid(); });
+  el("btn-deck-clear").addEventListener("click", () => { DECK.squads = emptySquads(); renderSquadGrid(); });
+  el("btn-deck-copy").addEventListener("click", () => {
+    if(DECK.decks[0]) { DECK.squads = DECK.decks[0].map(s => [...s]); renderSquadGrid(); }
+  });
+  el("btn-deck-confirm").addEventListener("click", confirmDeck);
+
+  /* board interactions */
+  const canvas = el("board-canvas");
+  let dragging = false, dragMoved = false, lastX = 0, lastY = 0;
+  canvas.addEventListener("mousedown", e => {
+    dragging = true; dragMoved = false; lastX = e.clientX; lastY = e.clientY;
+  });
+  window.addEventListener("mousemove", e => {
+    if(!dragging) return;
+    const dx = e.clientX - lastX, dy = e.clientY - lastY;
+    if(Math.abs(dx) + Math.abs(dy) > 3) dragMoved = true;
+    if(dragMoved){
+      CAM.x -= dx / CAM.z; CAM.y -= dy / CAM.z;
+      lastX = e.clientX; lastY = e.clientY;
+    }
+  });
+  window.addEventListener("mouseup", e => {
+    if(!dragging) return;
+    dragging = false;
+    if(!dragMoved && e.target === canvas){
+      const [x, y] = tileFromEvent(e);
+      onBoardClick(x, y);
+    }
+  });
+  canvas.addEventListener("wheel", e => {
+    e.preventDefault();
+    const r = canvas.getBoundingClientRect();
+    const mx = e.clientX - r.left - r.width / 2, my = e.clientY - r.top - r.height / 2;
+    const before = CAM.z;
+    CAM.z = Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, CAM.z * (e.deltaY < 0 ? 1.15 : 1 / 1.15)));
+    /* keep the tile under the cursor fixed while zooming */
+    CAM.x += mx / before - mx / CAM.z;
+    CAM.y += my / before - my / CAM.z;
+  }, { passive: false });
+
+  el("minimap").addEventListener("mousedown", e => {
+    const r = e.target.getBoundingClientRect();
+    CAM.x = (e.clientX - r.left) / 1.5;
+    CAM.y = (e.clientY - r.top) / 1.5;
+  });
+
+  window.addEventListener("keydown", e => {
+    if(G.phase !== "board") return;
+    const step = Math.max(1, Math.round(40 / CAM.z));
+    if(e.key === "ArrowLeft"  || e.key === "a") CAM.x -= step;
+    if(e.key === "ArrowRight" || e.key === "d") CAM.x += step;
+    if(e.key === "ArrowUp"    || e.key === "w") CAM.y -= step;
+    if(e.key === "ArrowDown"  || e.key === "s") CAM.y += step;
+    if(e.key === "Escape") cancelMode();
+  });
+
+  /* sidebar buttons */
+  el("btn-split").addEventListener("click", openSplitModal);
+  el("btn-converge").addEventListener("click", startConverge);
+  el("btn-garrison").addEventListener("click", openGarrisonModal);
+  el("btn-collect").addEventListener("click", () => { collectGarrison(G.selected); refreshSidebar(); });
+  el("btn-endturn").addEventListener("click", () => { endTurn(); refreshSidebar(); });
+
+  /* modals */
+  el("btn-split-ok").addEventListener("click", confirmSplitPick);
+  el("btn-split-cancel").addEventListener("click", () => el("modal-split").classList.add("hidden"));
+  el("btn-gar-ok").addEventListener("click", confirmGarrisonPick);
+  el("btn-gar-cancel").addEventListener("click", () => el("modal-garrison").classList.add("hidden"));
+  el("btn-enc-lock").addEventListener("click", () => { encLockIn(); refreshSidebar(); });
+  el("btn-enc-close").addEventListener("click", finishEncounter);
+  el("btn-restart").addEventListener("click", () => location.reload());
+});
+</script>
 </body>
 </html>

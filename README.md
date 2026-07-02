@@ -4,7 +4,7 @@ A retro-styled, deck-building tactical board game. HTML/JS prototype (a Godot po
 
 ## How to run
 
-Open `index.html` in any modern browser — no build step, no server needed.
+Open `index.html` in any modern browser — no build step, no server needed. The whole game (HTML, CSS, JS) is self-contained in that single file, so it works even in previews/hosts that don't fetch sibling files.
 
 ## How to play
 
@@ -51,16 +51,17 @@ The battle continues until one side is wiped out. Survivors keep their remaining
 
 ## Code layout
 
+Everything lives in `index.html`, split into clearly commented `<style>` and `<script>` blocks in this order:
+
 ```
-index.html        screens & modals
-css/style.css     retro pixel styling
-js/data.js        character roster & unit factory
-js/board.js       seeded 100×100 board generation (zones, buildings)
-js/game.js        game state, movement, AP, rounds, win conditions
-js/encounter.js   battle system + battle UI
-js/render.js      canvas renderer + minimap
-js/ui.js          sidebar, deck builder, modals
-js/main.js        input wiring & bootstrap
+<style>            retro pixel styling
+<script> data      character roster & unit factory
+<script> board     seeded 100×100 board generation (zones, buildings)
+<script> game      game state, movement, AP, rounds, win conditions
+<script> encounter battle system + battle UI
+<script> render    canvas renderer + minimap
+<script> ui        sidebar, deck builder, modals
+<script> main      input wiring & bootstrap
 ```
 
 Character sprites are emoji placeholders for now — real sprites can be dropped in later.
